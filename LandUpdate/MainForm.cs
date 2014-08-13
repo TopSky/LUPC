@@ -35,7 +35,8 @@ namespace LandUpdate
         public ILayer    m_xzdwLayer;
         public ILayer    m_xzqLayer;
 
-        //下面这些Envelope需要全局吗？
+        //下面这些Envelope需要全局吗，？
+        //需要
         IEnvelope m_monitorEnv;
         IEnvelope m_dltbEnv;
         IEnvelope m_xzqEnv;

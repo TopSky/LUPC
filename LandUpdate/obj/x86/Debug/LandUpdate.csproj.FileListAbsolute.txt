@@ -17,3 +17,5 @@ F:\Land\LandUpdate\LandUpdate\bin\Debug\LandUpdate.exe
 F:\Land\LandUpdate\LandUpdate\bin\Debug\LandUpdate.pdb
 F:\Land\LandUpdate\LandUpdate\obj\x86\Debug\LandUpdate.mainForm.resources
 F:\Land\LandUpdate\LandUpdate\obj\x86\Debug\LandUpdate.FormNewPrj.resources
+E:\Dev\Land\LandUpdate\LUPC\LandUpdate\obj\x86\Debug\LandUpdate.exe
+E:\Dev\Land\LandUpdate\LUPC\LandUpdate\obj\x86\Debug\LandUpdate.pdb
