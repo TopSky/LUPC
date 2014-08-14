@@ -542,14 +542,14 @@ namespace LandUpdate
         private void jctbStatics_Click(object sender, EventArgs e)
         {
             //1、数据完备性判断，必选图层为JCTB和DLTB，其他不是必选
-            if (m_monitorLayers.Count <= 0) 
+            if (m_monitorLayers.Count <= 0)
             {
-                MessageBox.Show("请导入监测图斑图层！"); 
-                return; 
+                MessageBox.Show("请导入监测图斑图层！");
+                return;
             }
             if (m_dltbLayer == null)
             {
-                MessageBox.Show("请导入基础库中的dltb图层，否则无法进行统计计算！");
+                MessageBox.Show("请导入基础库中的DLTB图层，否则无法进行统计计算！");
                 return;
             }
             //2、数据准备，拷贝原始数据到BASEDATA
@@ -558,58 +558,100 @@ namespace LandUpdate
             m_lyerEnvelop.Add(m_monitorEnv);
 
             IFeatureClass monitorSumFC = Function.MergeFeatureClasses(m_monitorLayers);
-            if (!Function.AddSelectedFileds2Layer(ref monitorSumFC)) 
+            if (!Function.AddSelectedFileds2Layer(ref monitorSumFC))
             {
                 MessageBox.Show("为监测图斑图层添加字段失败！");
                 return;
             }
-            string shpPath = m_prjMan.m_projectPath+"\\" + m_prjMan.m_projectName + "\\" + m_prjMan.m_projectName + "\\" + ProjectManage.m_baseData;// +"\\" + "jctb.shp";
+            string shpPath = m_prjMan.m_projectPath + "\\" + m_prjMan.m_projectName + "\\" + ProjectManage.m_baseData;// +"\\" + "jctb.shp";
             Function.saveFeatureClass(monitorSumFC, shpPath);
+            string shpSrcPath = shpPath + "\\" + "GPL0.shp";
+            string newName = shpPath + "\\" + "jctb_OLD.shp";
+            Function.reNameShpFile(shpSrcPath, newName);
+
 
             if (!CopyLayerToBaseDataFolder(m_dltbLayer, m_dltbEnv, shpPath))//dltb
             {
                 MessageBox.Show("数据拷贝失败，无法进行统计计算！");
                 return;
             }
+            else
+            {
+                newName = shpPath + "\\" + "dltb.shp";
+                Function.reNameShpFile(shpSrcPath, newName);
+            }
             if (!CopyLayerToBaseDataFolder(m_lxdwLayer, m_lxdwEnv, shpPath))//lxdw
             {
                 MessageBox.Show("数据拷贝失败，无法进行统计计算！");
                 return;
+            }
+            else
+            {
+                newName = shpPath + "\\" + "lxdw.shp";
+                Function.reNameShpFile(shpSrcPath, newName);
             }
             if (!CopyLayerToBaseDataFolder(m_xzdwLayer, m_xzdwEnv, shpPath))//xzdw
             {
                 MessageBox.Show("数据拷贝失败，无法进行统计计算！");
                 return;
             }
+            else
+            {
+                newName = shpPath + "\\" + "xzdw.shp";
+                Function.reNameShpFile(shpSrcPath, newName);
+            }
             if (!CopyLayerToBaseDataFolder(m_xzqLayer, m_xzqEnv, shpPath))//xzq
             {
                 MessageBox.Show("数据拷贝失败，无法进行统计计算！");
                 return;
+            }
+            else
+            {
+                newName = shpPath + "\\" + "xzq.shp";
+                Function.reNameShpFile(shpSrcPath, newName);
             }
             if (!CopyLayerToBaseDataFolder(m_jbntLayers, m_jbntEnv, shpPath))//jbnt
             {
                 MessageBox.Show("数据拷贝失败，无法进行统计计算！");
                 return;
             }
+            else
+            {
+                newName = shpPath + "\\" + "jbnt.shp";
+                Function.reNameShpFile(shpSrcPath, newName);
+            }
             if (!CopyLayerToBaseDataFolder(m_ydspLayers, m_ydspEnv, shpPath))//YDSP
             {
                 MessageBox.Show("数据拷贝失败，无法进行统计计算！");
                 return;
+            }
+            else
+            {
+                newName = shpPath + "\\" + "spsj.shp";
+                Function.reNameShpFile(shpSrcPath, newName);
             }
             if (!CopyLayerToBaseDataFolder(m_redLineLayers, m_redLineEnv, shpPath))//GHHX
             {
                 MessageBox.Show("数据拷贝失败，无法进行统计计算！");
                 return;
             }
+            else
+            {
+                newName = shpPath + "\\" + "RedLine.shp";
+                Function.reNameShpFile(shpSrcPath, newName);
+            }
 
-            
             Function.CalJCTBStatistic(monitorSumFC, m_dltbLayer as IFeatureClass, m_lxdwLayer as IFeatureClass, m_xzdwLayer as IFeatureClass);
+            Function.SC_JCTBandXZQ(monitorSumFC, (m_xzqLayer as IFeatureLayer).FeatureClass);
+            Function.SC_JCTBandJBNT(monitorSumFC, Function.MergeFeatureClasses(m_jbntLayers));
+            Function.SC_JCTBandYDSP(monitorSumFC, Function.MergeFeatureClasses(m_ydspLayers));
 
-            
-                
-                  
-       
-            
+            Function.saveFeatureClass(monitorSumFC, shpPath);
+
+            newName = shpPath + "\\" + "jctb_new.shp";
+            Function.reNameShpFile(shpSrcPath, newName);
+
+
             //1合并监测图层，以及其他可合并的图层
 
             //2：将字段加入监测图层
@@ -618,7 +660,7 @@ namespace LandUpdate
             //5将各值更新
             //6显示计算结果
 
-            
+
         }
         //生成移动端数据
         private void generateMobileData_Click(object sender, EventArgs e)
@@ -633,7 +675,7 @@ namespace LandUpdate
         /// <param name="srEnvelope">原始layer的Envelope</param>
         /// <param name="outputPathName">输出路径</param>
         /// <returns></returns>
-        private bool CopyLayerToBaseDataFolder(ILayer srLayer, IEnvelope srEnvelope, string outputPathName)
+        private bool CopyLayerToBaseDataFolder(ILayer srLayer, IEnvelope srEnvelope, string outputPathName )
         {
             try
             {
@@ -643,7 +685,8 @@ namespace LandUpdate
                     pArrayList.Add(srLayer);
                     srEnvelope = Function.getLayersExtent(pArrayList);
 
-                    IFeatureClass pFeatCls = srLayer as IFeatureClass;
+                    IFeatureLayer pFeatLyr = srLayer as IFeatureLayer;
+                    IFeatureClass pFeatCls = pFeatLyr.FeatureClass;
                     Function.saveFeatureClass(pFeatCls, outputPathName);
                 }
                 else

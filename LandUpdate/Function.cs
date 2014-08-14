@@ -23,6 +23,7 @@ using ESRI.ArcGIS.DataSourcesFile;
 using ESRI.ArcGIS.ConversionTools;         //添加引用
 using ESRI.ArcGIS.Geoprocessing;
 using ESRI.ArcGIS.Geoprocessor;
+using ESRI.ArcGIS.AnalysisTools;
 
 
   
@@ -96,13 +97,50 @@ namespace LandUpdate
 
         public static bool reNameShpFile(string shpSrcPath, string newName)
         {
-            int index = shpSrcPath.LastIndexOf(".");
-            string baseName = shpSrcPath.Substring(0, index);
-            //string shpName = 
+            int index1 = shpSrcPath.LastIndexOf(".");
+            int index2 = newName.LastIndexOf(".");
+            string baseNameSrc = shpSrcPath.Substring(0, index1);
+            string baseNameDst = newName.Substring(0, index2);
 
-            //if(File.Exists())
+            string shxNameSrc = baseNameSrc + ".shx";
+            string dbfNameSrc = baseNameSrc + ".dbf";
+            string prjNameSrc = baseNameSrc + ".prj";
+            string sbnNameSrc = baseNameSrc + ".sbn";
+            string sbxNameSrc = baseNameSrc + ".sbx";
+            string shxXmlNameSrc = baseNameSrc + ".shp.xml";
+
+            string shxNameDst = baseNameDst + ".shx";
+            string dbfNameDst = baseNameDst + ".dbf";
+            string prjNameDst = baseNameDst + ".prj";
+            string sbnNameDst = baseNameDst + ".sbn";
+            string sbxNameDst = baseNameDst + ".sbx";
+            string shxXmlNameDst = baseNameDst + ".shp.xml";
+
+
+            if (File.Exists(shxNameSrc))
+                File.Move(shxNameSrc, shxNameDst);
+
+            if (File.Exists(dbfNameSrc))
+                File.Move(dbfNameSrc, dbfNameDst);
+
+            if (File.Exists(prjNameSrc))
+                File.Move(prjNameSrc, prjNameDst);
+
+            if (File.Exists(sbnNameSrc))
+                File.Move(sbnNameSrc, sbnNameDst);
+
+            if (File.Exists(sbxNameSrc))
+                File.Move(sbxNameSrc, sbxNameDst);
+
+            if (File.Exists(shxXmlNameSrc))
+                File.Move(shxXmlNameSrc, shxXmlNameDst);
+
+
+            if (File.Exists(shpSrcPath))
+                File.Move(shpSrcPath, newName);
             return true;
         }
+
 
 
         public static IEnvelope getLayersExtent(ArrayList lyrs)
@@ -142,6 +180,9 @@ namespace LandUpdate
         {
             
             IFeatureClass featureClassOut1 = (arrFeatureLyrs[0] as IFeatureLayer).FeatureClass;
+            if (arrFeatureLyrs.Count == 1)
+                return featureClassOut1;
+
             IObjectCopy pObjectCopy = new ObjectCopyClass();
             //object copyFC = featureClassOut1;
             object preFC = new object();
@@ -157,8 +198,7 @@ namespace LandUpdate
             int count1 = featureClassOut1.FeatureCount(null);
             
              
-            if (arrFeatureLyrs.Count == 1)
-                return featureClassOut1;
+            
            // IFeatureClass featureClassIn = 
             int intFeatureCount = 0;
 
@@ -430,7 +470,11 @@ namespace LandUpdate
             
             gp.OverwriteOutput = true;                     //允许运算结果覆盖现有文件
 
-            ESRI.ArcGIS.ConversionTools.FeatureClassToShapefile convert = new ESRI.ArcGIS.ConversionTools.FeatureClassToShapefile(); //定义 convert工具
+            FeatureClassToShapefile convert = new FeatureClassToShapefile(); //定义 convert工具
+            //IGpValueTableObject vtobject = new GpValueTableObject();
+            //vtobject.SetColumns(2);
+            //object obj = pInFeatureClass;
+            //vtobject.AddRow(ref obj);
             convert.Input_Features = pInFeatureClass;    //输入对象
             convert.Output_Folder = outputPathName;     //输出对象
            // Export 
@@ -752,5 +796,223 @@ namespace LandUpdate
          * 注意一点：图层顺序变化时需要重新遍历Map，这会导致多次遍历的问题。而且照顾不到图层名称不规范，或者多个JCTB图层的问题
          * 初步想法，暂不实现
          */
+
+        #region 统计计算
+        /*
+         * 统计计算新算法：
+         * 1、用Intersect工具做相交，JCTB与所有图层，保存在临时文件夹里,bin/debug/tmpResult
+         * 2、
+         */
+
+        public static bool SC_JCTBandTDLY(IFeatureClass fc_jctb, IFeatureClass fc_dltb,IFeatureClass fc_xzdw,IFeatureClass fc_lxdw)
+        {
+            
+            return false;
+        }
+
+        public static bool SC_JCTBandJBNT(IFeatureClass fc_jctb,IFeatureClass fc_jbnt)
+        {
+            object obj1 = fc_jctb;
+            object obj2 = fc_jbnt;
+            string strOutputPath = Application.StartupPath+"\\tempResult";
+            string strOutputName = "jbnt.shp";
+            bool bSuccess = GPIntersectTool(obj1, obj2, strOutputPath, strOutputName);
+            IFeatureClass fc_newJBNT = OpenShpFile(strOutputPath, "jbnt");
+            if (fc_newJBNT != null)
+            {
+                IFeatureCursor pJCTBCursor = null;//遍历游标
+                IFeature jctbFeat = null;//监测图斑要素
+               
+                //遍历监测图斑要素类中的所有要素
+                pJCTBCursor = fc_jctb.Search(null, false);
+                if (pJCTBCursor != null)
+                {
+                    jctbFeat = pJCTBCursor.NextFeature();
+                    while (jctbFeat != null)
+                    {
+                        string strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField("JCBH")).ToString();
+                        IQueryFilter pQueryfilter = new QueryFilterClass();
+                        pQueryfilter.WhereClause = "JCBH = '"+strJcbh+"'";
+                        IFeatureCursor pJBNTCursor = fc_newJBNT.Search(pQueryfilter, false);
+                        int indexJBNTZY = jctbFeat.Fields.FindField(JBNTZY);
+                        
+                        if (pJBNTCursor == null)
+                        {
+                            jctbFeat.set_Value(indexJBNTZY, 0);
+                        }
+                        else
+                        {
+                            IFeature pJBNTfeat = pJBNTCursor.NextFeature();
+                            double jbntzyArea = 0;
+                            while (pJBNTfeat != null)
+                            {
+                                IArea pArea = (IArea)pJBNTfeat.ShapeCopy;
+                                jbntzyArea += pArea.Area;
+                                pJBNTfeat = pJBNTCursor.NextFeature();
+                            }
+                            jctbFeat.set_Value(indexJBNTZY, jbntzyArea);
+                        }
+
+                        jctbFeat.Store();
+                        jctbFeat = pJCTBCursor.NextFeature();
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        public static bool SC_JCTBandXZQ(IFeatureClass fc_jctb, IFeatureClass fc_XZQ)
+        {
+            object obj1 = fc_jctb;
+            object obj2 = fc_XZQ;
+            string strOutputPath = Application.StartupPath + "\\tempResult"; 
+            string strOutputName = "xzq.shp";
+            bool bSuccess = GPIntersectTool(obj1, obj2, strOutputPath, strOutputName);
+            IFeatureClass fc_newXZQ = OpenShpFile(strOutputPath, "xzq");
+            if (fc_newXZQ != null)
+            {
+                IFeatureCursor pJCTBCursor = null;//遍历游标
+                IFeature jctbFeat = null;//监测图斑要素
+                //遍历监测图斑要素类中的所有要素
+                pJCTBCursor = fc_jctb.Search(null, false);
+                if (pJCTBCursor != null)
+                {
+                    jctbFeat = pJCTBCursor.NextFeature();
+                    while (jctbFeat != null)
+                    {
+                        string strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField("JCBH")).ToString();
+                        IQueryFilter pQueryfilter = new QueryFilterClass();
+                        pQueryfilter.WhereClause = "JCBH = '" + strJcbh + "'";
+                        IFeatureCursor pXZQCursor = fc_newXZQ.Search(pQueryfilter, false);
+                        int indexXZBH = jctbFeat.Fields.FindField(XZBH);
+
+                        if (pXZQCursor == null)
+                        {
+                            jctbFeat.set_Value(indexXZBH, "-1");
+                        }
+                        else
+                        {
+                            IFeature pXZQfeat = pXZQCursor.NextFeature();
+                            string strXZQDM = "";
+                            while (pXZQfeat != null)
+                            {
+                                strXZQDM += pXZQfeat.get_Value(pXZQfeat.Fields.FindField("XZQDM_1")).ToString()+";";
+                                
+                                pXZQfeat = pXZQCursor.NextFeature();
+                            }
+                            strXZQDM = strXZQDM.Substring(0, strXZQDM.Length - 1);
+                            jctbFeat.set_Value(indexXZBH, strXZQDM);
+                        }
+
+                        jctbFeat.Store();
+                        jctbFeat = pJCTBCursor.NextFeature();
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        public static bool SC_JCTBandYDSP(IFeatureClass fc_jctb, IFeatureClass fc_ydsp)
+        {
+            object obj1 = fc_jctb;
+            object obj2 = fc_ydsp;
+            string strOutputPath = Application.StartupPath + "\\tempResult"; 
+            string strOutputName = "spsj.shp";
+            bool bSuccess = GPIntersectTool(obj1, obj2, strOutputPath, strOutputName);
+            IFeatureClass fc_newYDSP = OpenShpFile(strOutputPath, "spsj");
+            if (fc_newYDSP != null)
+            {
+                IFeatureCursor pJCTBCursor = null;//遍历游标
+                IFeature jctbFeat = null;//监测图斑要素
+
+                //遍历监测图斑要素类中的所有要素
+                pJCTBCursor = fc_jctb.Search(null, false);
+                if (pJCTBCursor != null)
+                {
+                    jctbFeat = pJCTBCursor.NextFeature();
+                    while (jctbFeat != null)
+                    {
+                        string strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField("JCBH")).ToString();
+                        IQueryFilter pQueryfilter = new QueryFilterClass();
+                        pQueryfilter.WhereClause = "JCBH = '" + strJcbh + "'";
+                        IFeatureCursor pYDSPCursor = fc_newYDSP.Search(pQueryfilter, false);
+                        int indexYDSPCH = jctbFeat.Fields.FindField(YDSPCH);
+
+                        if (pYDSPCursor == null)
+                        {
+                            jctbFeat.set_Value(indexYDSPCH, 0);
+                        }
+                        else
+                        {
+                            IFeature pYDSPfeat = pYDSPCursor.NextFeature();
+                            double ydspchArea = 0;
+                            while (pYDSPfeat != null)
+                            {
+                                IArea pArea = (IArea)pYDSPfeat.ShapeCopy;
+                                ydspchArea += pArea.Area;
+                                pYDSPfeat = pYDSPCursor.NextFeature();
+                            }
+                            jctbFeat.set_Value(indexYDSPCH, ydspchArea);
+                        }
+
+                        jctbFeat.Store();
+                        jctbFeat = pJCTBCursor.NextFeature();
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        public static bool GPIntersectTool(object IntersectObj,object srcObj ,string strOutputPath,string strOutputName)
+        {
+            IGpValueTableObject vtobject = new GpValueTableObject();
+            vtobject.SetColumns(2);
+            vtobject.AddRow(ref IntersectObj);
+            vtobject.AddRow(ref srcObj);
+
+            string strOutput = strOutputPath + "\\" + strOutputName;
+
+            Geoprocessor gp = new Geoprocessor();
+            gp.OverwriteOutput = true;
+            Intersect intersectTool = new Intersect();
+            intersectTool.in_features = vtobject;    //输入对象
+            intersectTool.out_feature_class = strOutput;     //输出对象
+            try
+            {
+                // Export 
+                gp.Execute(intersectTool, null);                //执行
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+
+        }
+
+        private static IFeatureClass OpenShpFile(string sPath, string sShapeName)
+        {
+            IFeatureClass rltFClass = null;
+            IWorkspaceFactory pWSFact;
+            IWorkspace pWS;
+            IFeatureWorkspace pFWS;
+            try
+            {
+                pWSFact = new ShapefileWorkspaceFactoryClass();
+                pWS = pWSFact.OpenFromFile(sPath, 0);
+                pFWS = pWS as IFeatureWorkspace; 
+                rltFClass = pFWS.OpenFeatureClass(sShapeName);
+            }
+            catch (Exception E)
+            {
+                MessageBox.Show(E.Message);
+            }
+            return rltFClass;
+        }
+        #endregion
+
     }
 }
