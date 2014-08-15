@@ -227,7 +227,11 @@ namespace LandUpdate
         //保存工程
         private void saveProject_Click(object sender, EventArgs e)
         {
-
+            if (!m_isProjOpen)
+            {
+                MessageBox.Show("未打开工程！");
+                return;
+            }
             m_prjMan.WriteProjectFile();
             string mxdFileName = m_prjMan.m_projectPath + "\\" + m_prjMan.m_projectName + "\\" + m_prjMan.m_projectName + ".mxd";
 
@@ -564,10 +568,10 @@ namespace LandUpdate
                 return;
             }
             string shpPath = m_prjMan.m_projectPath + "\\" + m_prjMan.m_projectName + "\\" + ProjectManage.m_baseData;// +"\\" + "jctb.shp";
-            Function.saveFeatureClass(monitorSumFC, shpPath);
+            //Function.saveFeatureClass(monitorSumFC, shpPath);
             string shpSrcPath = shpPath + "\\" + "GPL0.shp";
-            string newName = shpPath + "\\" + "jctb_OLD.shp";
-            Function.reNameShpFile(shpSrcPath, newName);
+            string newName = "";//shpPath + "\\" + "jctb_OLD.shp";
+            //Function.reNameShpFile(shpSrcPath, newName);
 
 
             if (!CopyLayerToBaseDataFolder(m_dltbLayer, m_dltbEnv, shpPath))//dltb
@@ -641,17 +645,32 @@ namespace LandUpdate
                 Function.reNameShpFile(shpSrcPath, newName);
             }
 
-            Function.CalJCTBStatistic(monitorSumFC, m_dltbLayer as IFeatureClass, m_lxdwLayer as IFeatureClass, m_xzdwLayer as IFeatureClass);
+            IFeatureLayer pDLTBFeatLyr = m_dltbLayer as IFeatureLayer;
+            IFeatureLayer pLXDWFeatLyr = m_lxdwLayer as IFeatureLayer;
+            IFeatureLayer pXZDWFeatLyr = m_xzdwLayer as IFeatureLayer;
+            IFeatureClass pLXDWFeatCls = null;
+            IFeatureClass pXZDWFeatCls = null;
+            if (pLXDWFeatLyr != null)
+            {
+                pLXDWFeatCls = pLXDWFeatLyr.FeatureClass;
+            }
+            if (pXZDWFeatLyr != null)
+            {
+                pXZDWFeatCls = pXZDWFeatLyr.FeatureClass;
+            }
+
+            Function.CalJCTBStatistic(monitorSumFC, pDLTBFeatLyr.FeatureClass, pLXDWFeatCls, pXZDWFeatCls);
+
             Function.SC_JCTBandXZQ(monitorSumFC, (m_xzqLayer as IFeatureLayer).FeatureClass);
             Function.SC_JCTBandJBNT(monitorSumFC, Function.MergeFeatureClasses(m_jbntLayers));
             Function.SC_JCTBandYDSP(monitorSumFC, Function.MergeFeatureClasses(m_ydspLayers));
 
             Function.saveFeatureClass(monitorSumFC, shpPath);
 
-            newName = shpPath + "\\" + "jctb_new.shp";
+            newName = shpPath + "\\" + "jctb.shp";
             Function.reNameShpFile(shpSrcPath, newName);
 
-
+            MessageBox.Show("统计计算完成！");
             //1合并监测图层，以及其他可合并的图层
 
             //2：将字段加入监测图层
