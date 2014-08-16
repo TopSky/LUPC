@@ -24,6 +24,7 @@ using ESRI.ArcGIS.ConversionTools;         //添加引用
 using ESRI.ArcGIS.Geoprocessing;
 using ESRI.ArcGIS.Geoprocessor;
 using ESRI.ArcGIS.AnalysisTools;
+using ESRI.ArcGIS.DataManagementTools;
 
 
   
@@ -481,27 +482,93 @@ namespace LandUpdate
             gp.Execute(convert,null);                //执行
             return true;
         }
-
+        //调用Merge工具不成功
         public static bool MergeLayers(ArrayList srArrayList, string strOutputPath)
         {
             //样例是可以执行成功的，但是如果是ArrayList，报错
             Geoprocessor gp = new Geoprocessor();
             gp.OverwriteOutput = true;
-            ESRI.ArcGIS.DataManagementTools.Merge mergeLayersTool = new ESRI.ArcGIS.DataManagementTools.Merge();
-            string strInput = @"F:\Land\data\jctb\371082荣成市\20130037108201荣成市\371082jctb.shp;F:\Land\data\jctb\371082荣成市\20130037108201荣成市\371082thzd.shp";
-            string strOutput = @"F:\Land\data\jctb\371082荣成市\20130037108201荣成市\Merge\a.shp";
-            mergeLayersTool.inputs = strInput;    //输入对象
-            mergeLayersTool.output = strOutput;     //输出对象
+            Merge mergeLayersTool = new Merge();
+            //string strInput = @"F:\Land\data\jctb\371082荣成市\20130037108201荣成市\371082jctb.shp;F:\Land\data\jctb\371082荣成市\20130037108201荣成市\371082thzd.shp";
+            //string strOutput = @"F:\Land\data\jctb\371082荣成市\20130037108201荣成市\Merge\a.shp";
+
+            ////makefeaturelayer,copyfeatures两个工具可以用
+
+            
+            IGpValueTableObject vtobject = new GpValueTableObject();
+            vtobject.SetColumns(2);
+            object[] objArray = new object[srArrayList.Count];
+            for (int i = 0; i < srArrayList.Count; i++)
+            {
+                ILayer plyr = srArrayList[i] as ILayer;
+                IFeatureLayer pFeatLyr = plyr as IFeatureLayer;
+                object obj = pFeatLyr.FeatureClass;
+                objArray[i] = obj;
+            }
+            for (int i = 0; i < objArray.Length; i++)
+            {
+                object obj = objArray[i];
+                vtobject.AddRow(ref obj);
+            }
+            
+            mergeLayersTool.inputs = vtobject;    //输入对象
+            mergeLayersTool.output = strOutputPath;     //输出对象
             // Export 
-            gp.Execute(mergeLayersTool, null);                //执行
-            MessageBox.Show("完成");
-            //makefeaturelayer,copyfeatures两个工具可以用
-            return true;
+            try
+            {
+                gp.Execute(mergeLayersTool, null);                //执行
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
+        //用这个Merge可以
+        public static IFeatureClass MergeLayers(ArrayList srArrayList,string strOutputPath,string strOutputName)
+        {
+            ILayer pLayer;
+            IFeatureLayer pFeatureLayer;
+            IFeatureClass pFeatureClass;
+            IWorkspaceName pNewWSName;
+            IBasicGeoprocessor pBasicGeop;
+            IFeatureClassName pFeatureClassName;
+            IDatasetName pDatasetName;
+            IFeatureClass pOutputFeatClass;
+            IArray pArray;
+            ITable pTable;
+            //合并图层的集合
+            pArray = new ArrayClass();
+            for (int i = 0; i < srArrayList.Count; i++)
+            {
+                pLayer = srArrayList[i] as ILayer;
+                pArray.Add(pLayer);
+            }
+            //定义输出图层的fields表
+            pLayer = srArrayList[0] as ILayer;
+            pTable = (ITable)pLayer;
+            pFeatureLayer = (IFeatureLayer)pLayer;
+            pFeatureClass = pFeatureLayer.FeatureClass;
+            
+            //输出文件类型
+            pFeatureClassName = new FeatureClassNameClass();
+            pFeatureClassName.FeatureType = esriFeatureType.esriFTSimple;
+            pFeatureClassName.ShapeFieldName = "Shape";
+            pFeatureClassName.ShapeType = pFeatureClass.ShapeType;
+            //输出shapefile的名称和位置
+            pNewWSName = new WorkspaceNameClass();
+            pNewWSName.WorkspaceFactoryProgID = "esriDataSourcesFile.ShapefileWorkspaceFactory";
+            pNewWSName.PathName = strOutputPath;
+            pDatasetName = (IDatasetName)pFeatureClassName;
+            pDatasetName.Name = strOutputName;
+            pDatasetName.WorkspaceName = pNewWSName;
 
+            //合并图层
+            pBasicGeop = new BasicGeoprocessorClass();
+            pOutputFeatClass = pBasicGeop.Merge(pArray, pTable, pFeatureClassName);
 
-     
-
+            return pOutputFeatClass;
+        }
         public static string getDataPath(string strTitle)  
         {  
             string strDatapath = "";  
@@ -993,7 +1060,7 @@ namespace LandUpdate
 
         }
 
-        private static IFeatureClass OpenShpFile(string sPath, string sShapeName)
+        public static IFeatureClass OpenShpFile(string sPath, string sShapeName)
         {
             IFeatureClass rltFClass = null;
             IWorkspaceFactory pWSFact;

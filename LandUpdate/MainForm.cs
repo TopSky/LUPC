@@ -257,7 +257,14 @@ namespace LandUpdate
         //退出
         private void exitProject_Click(object sender, EventArgs e)
         {
-            saveProject_Click(sender, e);
+            if (!m_isProjOpen)
+            {
+                DialogResult dr = MessageBox.Show("工程" + m_prjMan.m_projectName + "已打开，是否保存后关闭？", "提示", MessageBoxButtons.YesNo);
+                if (dr == System.Windows.Forms.DialogResult.Yes)
+                {
+                    saveProject_Click(sender, e);
+                }
+            }
             this.Close();
         }
 
@@ -561,8 +568,34 @@ namespace LandUpdate
             m_lyerEnvelop = new ArrayList();
             m_lyerEnvelop.Add(m_monitorEnv);
 
-            IFeatureClass monitorSumFC = Function.MergeFeatureClasses(m_monitorLayers);
-            if (!Function.AddSelectedFileds2Layer(ref monitorSumFC))
+            //IFeatureClass monitorSumFC = Function.MergeFeatureClasses(m_monitorLayers);//第一版的合并代码
+            IFeatureClass monitorSumFC = null;
+            string strJCTBMergePath = Application.StartupPath + "\\tempResult";
+            string strJCTBMergetName = "jctb.shp";
+            if (m_monitorLayers.Count == 1)
+            {
+                ILayer t_lyr = m_monitorLayers[0] as ILayer;
+                IFeatureLayer t_featLyr = t_lyr as IFeatureLayer;
+                IFeatureClass t_featcls = t_featLyr.FeatureClass;
+                if (Function.saveFeatureClass(t_featcls, strJCTBMergePath))
+                {
+                    string strOldName = strJCTBMergePath + "\\" + "GPL0.shp";
+                    string strNewName = strJCTBMergePath + "\\" + strJCTBMergetName ;
+                    Function.reNameShpFile(strOldName, strNewName);
+                    monitorSumFC = Function.OpenShpFile(strJCTBMergePath, "jctb");
+                }
+            }
+            else if (m_monitorLayers.Count > 1)
+            {
+                monitorSumFC = Function.MergeLayers(m_monitorLayers, strJCTBMergePath, "jctb");
+                if(monitorSumFC == null)
+                {
+                    MessageBox.Show("监测图斑图层合并失败！");
+                    return;
+                }
+            }
+
+            if (monitorSumFC == null || !Function.AddSelectedFileds2Layer(ref monitorSumFC))
             {
                 MessageBox.Show("为监测图斑图层添加字段失败！");
                 return;
@@ -747,10 +780,6 @@ namespace LandUpdate
             }
         }
 
-        //调用MergeGP 将图层合并
-        private void MergeLayers(ArrayList srArrayList, string outputPathName)
-        {
-        }
         #endregion
 
     }
