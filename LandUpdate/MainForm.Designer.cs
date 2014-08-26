@@ -63,6 +63,7 @@
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.txtPrjName = new System.Windows.Forms.ToolStripStatusLabel();
+            this.mnuMakeXZQTown = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.axToolbarControl1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.axTOCControl1)).BeginInit();
@@ -131,7 +132,8 @@
             this.beforeFieldMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.importDataMenu,
             this.jctbStatics,
-            this.generateMobileData});
+            this.generateMobileData,
+            this.mnuMakeXZQTown});
             this.beforeFieldMenuItem.Name = "beforeFieldMenuItem";
             this.beforeFieldMenuItem.Size = new System.Drawing.Size(104, 21);
             this.beforeFieldMenuItem.Text = "外业前数据准备";
@@ -361,6 +363,13 @@
             this.txtPrjName.Size = new System.Drawing.Size(80, 17);
             this.txtPrjName.Text = "未打开工程！";
             // 
+            // mnuMakeXZQTown
+            // 
+            this.mnuMakeXZQTown.Name = "mnuMakeXZQTown";
+            this.mnuMakeXZQTown.Size = new System.Drawing.Size(160, 22);
+            this.mnuMakeXZQTown.Text = "生成乡镇数据";
+            this.mnuMakeXZQTown.Click += new System.EventHandler(this.mnuMakeXZQTown_Click);
+            // 
             // mainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -429,6 +438,7 @@
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
         private System.Windows.Forms.ToolStripStatusLabel txtPrjName;
+        private System.Windows.Forms.ToolStripMenuItem mnuMakeXZQTown;
     }
 }
 

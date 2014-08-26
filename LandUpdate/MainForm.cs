@@ -13,6 +13,8 @@ using ESRI.ArcGIS.Carto;
 using ESRI.ArcGIS.SystemUI;
 using ESRI.ArcGIS.Geodatabase;
 using ESRI.ArcGIS.Geometry;
+using ESRI.ArcGIS.DataManagementTools;
+using ESRI.ArcGIS.Geoprocessor;
 
 namespace LandUpdate
 {
@@ -763,8 +765,11 @@ namespace LandUpdate
                 {
                     srEnvelope = Function.getLayersExtent(srArrayList);
 
-                    IFeatureClass pFeatCls = Function.MergeFeatureClasses(srArrayList);
-                    Function.saveFeatureClass(pFeatCls, outputPathName);
+                    //IFeatureClass pFeatCls = Function.MergeFeatureClasses(srArrayList);
+                    //Function.saveFeatureClass(pFeatCls, outputPathName);
+                    string path = System.IO.Path.GetDirectoryName(outputPathName);
+                    string file = System.IO.Path.GetFileNameWithoutExtension(outputPathName);
+                    Function.MergeLayers(srArrayList, path,file);
                 }
                 else
                 {
@@ -780,7 +785,77 @@ namespace LandUpdate
             }
         }
 
+
         #endregion
+        //生成乡镇数据
+        private void mnuMakeXZQTown_Click(object sender, EventArgs e)
+        {
+            if (m_xzqLayer == null)
+            {
+                MessageBox.Show("请先加载XZQ数据。");
+                return;
+            }
+
+            string strXZQTownListPath = Application.StartupPath+ "\\tempResult";
+            string strXZQTownListName = "XZQTownList.txt";
+            string filepath = strXZQTownListPath + "\\" + strXZQTownListName;
+            if (!File.Exists(filepath))
+            {
+                MessageBox.Show("乡镇对照文件不存在！");
+                return;
+            }
+            //先把XZQ数据拷贝到tempResult
+            string strOutputPath = Application.StartupPath + "\\tempResult";
+            string strOutputName = "xzqtown.shp";
+
+            IFeatureLayer pFeatLyr = m_xzqLayer as IFeatureLayer;
+            IFeatureClass pFeatCls = pFeatLyr.FeatureClass;
+            bool bSuccess = Function.saveFeatureClass(pFeatCls, strOutputPath );
+            if (!bSuccess)
+            {
+                MessageBox.Show("拷贝XZQ数据出错！");
+                return;
+            }
+            else
+            {
+                string shpSrcPath = strOutputPath + "\\" + "GPL0.shp";
+                Function.reNameShpFile(shpSrcPath, strOutputPath + "\\" + strOutputName);
+            }
+            //打开XZQTown.shp，增加字段XZQTDM，并填值
+            string strAddFieldName = "XZQTDM";
+            IFeatureClass fc_XZQTown = Function.OpenShpFile(strOutputPath, "xzqtown");
+            Function.AddFiled2Layer(ref fc_XZQTown, "XZQTMC", esriFieldType.esriFieldTypeString, 15);
+            bSuccess = Function.AddFiled2Layer(ref fc_XZQTown, strAddFieldName, esriFieldType.esriFieldTypeString, 9);
+            if (!bSuccess)
+            {
+                MessageBox.Show("添加XZQTDM字段出错！");
+                return;
+            }
+            
+            //向下的代码没调通
+            CalculateField fieldcalc = new CalculateField();
+            fieldcalc.expression = "Left([XZQDM],9)";//可能这个写法不对
+            //fieldcalc.expression = "Left([XZQDM]";
+            fieldcalc.expression_type = "VBScript";
+            IField field = fc_XZQTown.Fields.get_Field(fc_XZQTown.Fields.FindField(strAddFieldName));
+            fieldcalc.field = field;
+            fieldcalc.in_table = fc_XZQTown;
+
+            Geoprocessor gp = new Geoprocessor();
+            gp.OverwriteOutput = true;                     //允许运算结果覆盖现有文件
+            gp.Execute(fieldcalc, null);                //执行
+
+            //调用Dissolve工具，合并，数据生成到baseData文件夹
+            Dissolve dissolve = new Dissolve();
+            dissolve.in_features=fc_XZQTown;
+            dissolve.dissolve_field=field;
+            string shpPath = m_prjMan.m_projectPath + "\\" + m_prjMan.m_projectName + "\\" + ProjectManage.m_baseData;
+            dissolve.out_feature_class=shpPath+"\\xzqtown.shp";
+            dissolve.statistics_fields="SUM([KZMJ],SUM[JSMJ],FIRST[XZQTMC]";
+            gp.Execute(dissolve, null);
+
+            MessageBox.Show("乡镇图层生成成功！");
+        }
 
     }
     

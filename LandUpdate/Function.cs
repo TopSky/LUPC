@@ -697,7 +697,7 @@ namespace LandUpdate
             pFieldEdit = (IFieldEdit)pFieldExtra;
             pFieldEdit.Name_2 = fieldName;
             pFieldEdit.AliasName_2 = "统计数据";
-            pFieldEdit.Type_2 = esriFieldType.esriFieldTypeString;
+            pFieldEdit.Type_2 = fType;
             pFieldEdit.IsNullable_2 = true;
             pFieldEdit.Length_2 = length;
             if (jctbFC.FindField(fieldName) == -1)
