@@ -71,6 +71,8 @@ namespace LandUpdate
         //static const string TBZYSP = "TBZYSP";
         //static const string BGHTBBHLB = "BGHTBBHLB";
         //static const string LDPS = "LDPS";
+        const string JCBH = "JCBH";
+        const string JCMJ = "JCMJ";
         const string XZBH = "XZBH";
         const string GDZY = "GDZY";
         const string GDMJBL = "GDMJBL";
@@ -525,6 +527,13 @@ namespace LandUpdate
             }
         }
         //用这个Merge可以
+        /// <summary>
+        /// 合并图层并保存
+        /// </summary>
+        /// <param name="srArrayList"></param>
+        /// <param name="strOutputPath">文件保存路径</param>
+        /// <param name="strOutputName">文件名</param>
+        /// <returns></returns>
         public static IFeatureClass MergeLayers(ArrayList srArrayList,string strOutputPath,string strOutputName)
         {
             ILayer pLayer;
@@ -873,18 +882,187 @@ namespace LandUpdate
 
         public static bool SC_JCTBandTDLY(IFeatureClass fc_jctb, IFeatureClass fc_dltb,IFeatureClass fc_xzdw,IFeatureClass fc_lxdw)
         {
+            if (fc_jctb == null || fc_dltb == null)
+            {
+                return false;
+            }
+            //jctb与dltb做intersect，结果保存在TempResult\dltbintersect.shp，
+            object obj1 = fc_jctb;
+            object obj2 = fc_dltb;
+            string strOutputPath = Application.StartupPath + "\\tempResult";
+            string strOutputName = "dltbintersect.shp";
+            bool bSuccess = GPIntersectTool(obj1, obj2, strOutputPath, strOutputName);
+            if (!bSuccess)
+            {
+                return false;
+            }
+            IFeatureClass fc_DLTB_Intesect = OpenShpFile(strOutputPath, "dltbintersect");
+            IFeatureClass fc_XZDW_Intesect = null;
+            IFeatureClass fc_LXDW_Intesect = null;
+            if (fc_xzdw != null)
+            {
+                obj2 = fc_xzdw;
+                strOutputName = "xzdwintersect.shp";
+                bSuccess = GPIntersectTool(obj1, obj2, strOutputPath, strOutputName);
+                if (!bSuccess)
+                {
+                    return false;
+                }
+                fc_XZDW_Intesect = OpenShpFile(strOutputPath, "xzdwintersect");
+            }
+            if (fc_lxdw != null)
+            {
+                obj2 = fc_lxdw;
+                strOutputName = "lxdwintersect.shp";
+                bSuccess = GPIntersectTool(obj1, obj2, strOutputPath, strOutputName);
+                if (!bSuccess)
+                {
+                    return false;
+                }
+                fc_LXDW_Intesect = OpenShpFile(strOutputPath, "lxdwintersect");
+            }
+
+                IFeatureCursor pJCTBCursor = fc_jctb.Search(null, false); ;//遍历游标
+                if (pJCTBCursor != null)
+                {
+                    IFeature jctbFeat = pJCTBCursor.NextFeature();//监测图斑要素
+                    double jctbmj = 0;//监测图斑面积
+                    double sumzygdmj = 0;//占用耕地面积
+                    double gdmjbl = 0;//耕地面积比例，占用耕地面积/监测图斑面积
+                    double sumzyjsydmj = 0;//占用建设用地面积
+                    double sumzywlydmj = 0;//占用未利用地面积
+                    string strJcbh = "";//监测图斑监测编号
+                    IQueryFilter pQueryfilter = new QueryFilterClass();
+                    while (jctbFeat != null)
+                    {
+
+                        strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField(JCBH)).ToString();
+                        pQueryfilter.WhereClause = JCBH+" = '" + strJcbh + "'";
+                        IFeatureCursor pDLTBCursor = fc_DLTB_Intesect.Search(pQueryfilter,false);
+                        if (pDLTBCursor != null)
+                        {
+                            IFeature dltbFeat = pDLTBCursor.NextFeature();
+                            double gdmj=0;
+                            double jsydmj =0;
+                            double wlydmj =0;
+                            while (dltbFeat != null)
+                            {
+                                double mj = CalcTDLY(dltbFeat, fc_xzdw, fc_lxdw,strJcbh);
+                                GenerateMJ(dltbFeat,mj,out gdmj,out jsydmj,out wlydmj);
+                                sumzygdmj += gdmj;
+                                sumzyjsydmj += jsydmj;
+                                sumzywlydmj += wlydmj;
+                                dltbFeat = pDLTBCursor.NextFeature();
+                            }
+                        }
+                        int indexGDZY = jctbFeat.Fields.FindField(GDZY);
+                        int indexGDMJBL = jctbFeat.Fields.FindField(GDMJBL);
+                        int indexWLYDZY = jctbFeat.Fields.FindField(WLYDZY);
+                        int indexJSYDZY = jctbFeat.Fields.FindField(JSYDZY);
+                        Double.TryParse(jctbFeat.get_Value(jctbFeat.Fields.FindField(JCMJ)).ToString(), out jctbmj);
+                        jctbmj = jctbmj * 10000 / 15;//亩换算为平方米
+                        gdmjbl = sumzygdmj / jctbmj;
+                        jctbFeat.set_Value(indexGDZY, sumzygdmj);
+                        jctbFeat.set_Value(indexGDMJBL, gdmjbl);
+                        jctbFeat.set_Value(indexWLYDZY, sumzyjsydmj);
+                        jctbFeat.set_Value(indexJSYDZY, sumzywlydmj);
+                        jctbFeat.Store();
+                        jctbFeat = pJCTBCursor.NextFeature();
+
+                        jctbmj = 0;
+                        sumzygdmj = 0;//占用耕地面积
+                        gdmjbl = 0;//耕地面积比例，占用耕地面积/监测图斑面积
+                        sumzyjsydmj = 0;//占用建设用地面积
+                        sumzywlydmj = 0;//占用未利用地面积
+                    }
+                }
+
             
             return false;
         }
 
+        private static double CalcTDLY(IFeature pfeat_dltb, IFeatureClass fc_xzdw, IFeatureClass fc_lxdw,string strJCBH)
+        {
+            string strTBBH = pfeat_dltb.get_Value(pfeat_dltb.Fields.FindField("TBBH")).ToString();//TBBH
+            IArea pArea = (IArea)pfeat_dltb.ShapeCopy;
+            double tbmj = pArea.Area;
+            double tbdlmj = 0;
+            double xzdwmj = 0;
+            double lxdwmj = 0;
+            double tkmj = 0;
+            double tkxs = Double.Parse(pfeat_dltb.get_Value(pfeat_dltb.Fields.FindField("TKXS")).ToString());
+
+            IQueryFilter pQueryfilter = new QueryFilterClass();
+            if (fc_xzdw != null)
+            {
+                pQueryfilter.WhereClause = JCBH + " = '" + strJCBH + "'and (KCTBBH1 ='"+strTBBH+"' or KCTBBH2 = '"+strTBBH+"')";
+                IFeatureCursor pXZDWCursor = fc_xzdw.Search(pQueryfilter, false); ;//遍历游标
+                if (pXZDWCursor != null)
+                {
+                    IFeature pXZDWFeat = pXZDWCursor.NextFeature();
+                    while (pXZDWFeat != null)
+                    {
+                        IPolyline pLine = (IPolyline)pXZDWFeat.ShapeCopy;
+                        double cd = pLine.Length;
+                        double kd = Double.Parse(pXZDWFeat.get_Value(pXZDWFeat.Fields.FindField("KD")).ToString());
+                        double mj = cd * kd;
+                        double kcbl = Double.Parse(pXZDWFeat.get_Value(pXZDWFeat.Fields.FindField("KCBL")).ToString());
+                        mj *= kcbl;
+                        xzdwmj += mj;
+                        pXZDWFeat = pXZDWCursor.NextFeature();
+                    }
+                }
+            }
+
+            if (fc_lxdw != null)
+            {
+                pQueryfilter.WhereClause = JCBH + " = '" + strJCBH + "'and ZLTBBH ='" + strTBBH + "'";
+                IFeatureCursor pLXDWCursor = fc_lxdw.Search(pQueryfilter, false); ;//遍历游标
+                if (pLXDWCursor != null)
+                {
+                    IFeature pLXDWFeat = pLXDWCursor.NextFeature();
+                    while (pLXDWFeat != null)
+                    {
+                        double mj = Double.Parse(pLXDWFeat.get_Value(pLXDWFeat.Fields.FindField("MJ")).ToString());
+                        lxdwmj += mj;
+                        pLXDWFeat = pLXDWCursor.NextFeature();
+                    }
+                }
+            }
+
+            tkmj = (tbmj - xzdwmj - lxdwmj) * tkxs;
+            tbdlmj = tbmj - xzdwmj - lxdwmj - tkmj;
+
+            return tbdlmj;
+        }
+
+        private static void GenerateMJ(IFeature pfeat_dltb, double mj, out double gdmj, out double jsydmj, out double wlydmj)
+        {
+            gdmj = 0;
+            jsydmj = 0;
+            wlydmj = 0;
+            string strDLBM = pfeat_dltb.get_Value(pfeat_dltb.Fields.FindField("DLBM")).ToString();//DLBM
+            if (strDLBM == "01" || strDLBM == "011" || strDLBM == "012" || strDLBM == "013")
+            {
+                gdmj = mj;
+            }
+            else if (strDLBM == "101" || strDLBM == "102" || strDLBM == "105" || strDLBM == "106" || strDLBM == "107" || strDLBM == "113" || strDLBM == "118" || strDLBM == "201" || strDLBM == "202" || strDLBM == "203" || strDLBM == "204" || strDLBM == "205")
+            {
+                jsydmj = mj;
+            }
+            else if (strDLBM == "111" || strDLBM == "112" || strDLBM == "115" || strDLBM == "116" || strDLBM == "119" || strDLBM == "124" || strDLBM == "125" || strDLBM == "126" || strDLBM == "127" || strDLBM == "043")
+            {
+                wlydmj = mj;
+            }
+        }
         public static bool SC_JCTBandJBNT(IFeatureClass fc_jctb,IFeatureClass fc_jbnt)
         {
             object obj1 = fc_jctb;
             object obj2 = fc_jbnt;
             string strOutputPath = Application.StartupPath+"\\tempResult";
-            string strOutputName = "jbnt.shp";
+            string strOutputName = "jbntintersect.shp";
             bool bSuccess = GPIntersectTool(obj1, obj2, strOutputPath, strOutputName);
-            IFeatureClass fc_newJBNT = OpenShpFile(strOutputPath, "jbnt");
+            IFeatureClass fc_newJBNT = OpenShpFile(strOutputPath, "jbntintersect");
             if (fc_newJBNT != null)
             {
                 IFeatureCursor pJCTBCursor = null;//遍历游标
@@ -897,9 +1075,9 @@ namespace LandUpdate
                     jctbFeat = pJCTBCursor.NextFeature();
                     while (jctbFeat != null)
                     {
-                        string strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField("JCBH")).ToString();
+                        string strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField(JCBH)).ToString();
                         IQueryFilter pQueryfilter = new QueryFilterClass();
-                        pQueryfilter.WhereClause = "JCBH = '"+strJcbh+"'";
+                        pQueryfilter.WhereClause =JCBH+ "='"+strJcbh+"'";
                         IFeatureCursor pJBNTCursor = fc_newJBNT.Search(pQueryfilter, false);
                         int indexJBNTZY = jctbFeat.Fields.FindField(JBNTZY);
                         
@@ -934,9 +1112,9 @@ namespace LandUpdate
             object obj1 = fc_jctb;
             object obj2 = fc_XZQ;
             string strOutputPath = Application.StartupPath + "\\tempResult"; 
-            string strOutputName = "xzq.shp";
+            string strOutputName = "xzqintersect.shp";
             bool bSuccess = GPIntersectTool(obj1, obj2, strOutputPath, strOutputName);
-            IFeatureClass fc_newXZQ = OpenShpFile(strOutputPath, "xzq");
+            IFeatureClass fc_newXZQ = OpenShpFile(strOutputPath, "xzqintersect");
             if (fc_newXZQ != null)
             {
                 IFeatureCursor pJCTBCursor = null;//遍历游标
@@ -948,9 +1126,9 @@ namespace LandUpdate
                     jctbFeat = pJCTBCursor.NextFeature();
                     while (jctbFeat != null)
                     {
-                        string strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField("JCBH")).ToString();
+                        string strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField(JCBH)).ToString();
                         IQueryFilter pQueryfilter = new QueryFilterClass();
-                        pQueryfilter.WhereClause = "JCBH = '" + strJcbh + "'";
+                        pQueryfilter.WhereClause =JCBH+ " = '" + strJcbh + "'";
                         IFeatureCursor pXZQCursor = fc_newXZQ.Search(pQueryfilter, false);
                         int indexXZBH = jctbFeat.Fields.FindField(XZBH);
 
@@ -986,9 +1164,9 @@ namespace LandUpdate
             object obj1 = fc_jctb;
             object obj2 = fc_ydsp;
             string strOutputPath = Application.StartupPath + "\\tempResult"; 
-            string strOutputName = "spsj.shp";
+            string strOutputName = "spsjintersect.shp";
             bool bSuccess = GPIntersectTool(obj1, obj2, strOutputPath, strOutputName);
-            IFeatureClass fc_newYDSP = OpenShpFile(strOutputPath, "spsj");
+            IFeatureClass fc_newYDSP = OpenShpFile(strOutputPath, "spsjintersect");
             if (fc_newYDSP != null)
             {
                 IFeatureCursor pJCTBCursor = null;//遍历游标
@@ -1001,9 +1179,9 @@ namespace LandUpdate
                     jctbFeat = pJCTBCursor.NextFeature();
                     while (jctbFeat != null)
                     {
-                        string strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField("JCBH")).ToString();
+                        string strJcbh = jctbFeat.get_Value(jctbFeat.Fields.FindField(JCBH)).ToString();
                         IQueryFilter pQueryfilter = new QueryFilterClass();
-                        pQueryfilter.WhereClause = "JCBH = '" + strJcbh + "'";
+                        pQueryfilter.WhereClause = JCBH + "= '" + strJcbh + "'";
                         IFeatureCursor pYDSPCursor = fc_newYDSP.Search(pQueryfilter, false);
                         int indexYDSPCH = jctbFeat.Fields.FindField(YDSPCH);
 

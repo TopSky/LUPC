@@ -619,65 +619,83 @@ namespace LandUpdate
                 newName = shpPath + "\\" + "dltb.shp";
                 Function.reNameShpFile(shpSrcPath, newName);
             }
-            if (!CopyLayerToBaseDataFolder(m_lxdwLayer, m_lxdwEnv, shpPath))//lxdw
+            if (m_lxdwLayer != null)
             {
-                MessageBox.Show("数据拷贝失败，无法进行统计计算！");
-                return;
+                if (!CopyLayerToBaseDataFolder(m_lxdwLayer, m_lxdwEnv, shpPath))//lxdw
+                {
+                    MessageBox.Show("数据拷贝失败，无法进行统计计算！");
+                    return;
+                }
+                else
+                {
+                    newName = shpPath + "\\" + "lxdw.shp";
+                    Function.reNameShpFile(shpSrcPath, newName);
+                }
             }
-            else
+            if (m_xzdwLayer != null)
             {
-                newName = shpPath + "\\" + "lxdw.shp";
-                Function.reNameShpFile(shpSrcPath, newName);
+                if (!CopyLayerToBaseDataFolder(m_xzdwLayer, m_xzdwEnv, shpPath))//xzdw
+                {
+                    MessageBox.Show("数据拷贝失败，无法进行统计计算！");
+                    return;
+                }
+                else
+                {
+                    newName = shpPath + "\\" + "xzdw.shp";
+                    Function.reNameShpFile(shpSrcPath, newName);
+                }
             }
-            if (!CopyLayerToBaseDataFolder(m_xzdwLayer, m_xzdwEnv, shpPath))//xzdw
+            if (m_xzqLayer != null)
             {
-                MessageBox.Show("数据拷贝失败，无法进行统计计算！");
-                return;
+                if (!CopyLayerToBaseDataFolder(m_xzqLayer, m_xzqEnv, shpPath))//xzq
+                {
+                    MessageBox.Show("数据拷贝失败，无法进行统计计算！");
+                    return;
+                }
+                else
+                {
+                    newName = shpPath + "\\" + "xzq.shp";
+                    Function.reNameShpFile(shpSrcPath, newName);
+                }
             }
-            else
+            if (m_jbntLayers != null && m_jbntLayers.Count > 0)
             {
-                newName = shpPath + "\\" + "xzdw.shp";
-                Function.reNameShpFile(shpSrcPath, newName);
+                if (!CopyLayerToBaseDataFolder(m_jbntLayers, m_jbntEnv, shpPath + "\\" + "jbnt.shp"))//jbnt
+                {
+                    MessageBox.Show("数据拷贝失败，无法进行统计计算！");
+                    return;
+                }
+                else
+                {
+                        newName = shpPath + "\\" + "jbnt.shp";
+                        Function.reNameShpFile(shpSrcPath, newName);
+                }
             }
-            if (!CopyLayerToBaseDataFolder(m_xzqLayer, m_xzqEnv, shpPath))//xzq
+            if (m_ydspLayers != null && m_ydspLayers.Count > 0)
             {
-                MessageBox.Show("数据拷贝失败，无法进行统计计算！");
-                return;
+                if (!CopyLayerToBaseDataFolder(m_ydspLayers, m_ydspEnv, shpPath + "\\" + "spsj.shp"))//YDSP
+                {
+                    MessageBox.Show("数据拷贝失败，无法进行统计计算！");
+                    return;
+                }
+                else
+                {
+                        newName = shpPath + "\\" + "spsj.shp";
+                        Function.reNameShpFile(shpSrcPath, newName);
+                }
             }
-            else
+            if (m_redLineLayers != null && m_redLineLayers.Count > 0)
             {
-                newName = shpPath + "\\" + "xzq.shp";
-                Function.reNameShpFile(shpSrcPath, newName);
-            }
-            if (!CopyLayerToBaseDataFolder(m_jbntLayers, m_jbntEnv, shpPath))//jbnt
-            {
-                MessageBox.Show("数据拷贝失败，无法进行统计计算！");
-                return;
-            }
-            else
-            {
-                newName = shpPath + "\\" + "jbnt.shp";
-                Function.reNameShpFile(shpSrcPath, newName);
-            }
-            if (!CopyLayerToBaseDataFolder(m_ydspLayers, m_ydspEnv, shpPath))//YDSP
-            {
-                MessageBox.Show("数据拷贝失败，无法进行统计计算！");
-                return;
-            }
-            else
-            {
-                newName = shpPath + "\\" + "spsj.shp";
-                Function.reNameShpFile(shpSrcPath, newName);
-            }
-            if (!CopyLayerToBaseDataFolder(m_redLineLayers, m_redLineEnv, shpPath))//GHHX
-            {
-                MessageBox.Show("数据拷贝失败，无法进行统计计算！");
-                return;
-            }
-            else
-            {
-                newName = shpPath + "\\" + "RedLine.shp";
-                Function.reNameShpFile(shpSrcPath, newName);
+                if (!CopyLayerToBaseDataFolder(m_redLineLayers, m_redLineEnv, shpPath + "\\" + "RedLine.shp"))//GHHX
+                {
+                    MessageBox.Show("数据拷贝失败，无法进行统计计算！");
+                    return;
+                }
+                else
+                {
+                        newName = shpPath + "\\" + "RedLine.shp";
+                        Function.reNameShpFile(shpSrcPath, newName);
+                }
             }
 
             IFeatureLayer pDLTBFeatLyr = m_dltbLayer as IFeatureLayer;
@@ -694,12 +712,12 @@ namespace LandUpdate
                 pXZDWFeatCls = pXZDWFeatLyr.FeatureClass;
             }
 
-            Function.CalJCTBStatistic(monitorSumFC, pDLTBFeatLyr.FeatureClass, pLXDWFeatCls, pXZDWFeatCls);
-
             Function.SC_JCTBandXZQ(monitorSumFC, (m_xzqLayer as IFeatureLayer).FeatureClass);
             Function.SC_JCTBandJBNT(monitorSumFC, Function.MergeFeatureClasses(m_jbntLayers));
             Function.SC_JCTBandYDSP(monitorSumFC, Function.MergeFeatureClasses(m_ydspLayers));
 
+            //Function.CalJCTBStatistic(monitorSumFC, pDLTBFeatLyr.FeatureClass, pLXDWFeatCls, pXZDWFeatCls);
+            Function.SC_JCTBandTDLY(monitorSumFC, pDLTBFeatLyr.FeatureClass, pLXDWFeatCls, pXZDWFeatCls);
             Function.saveFeatureClass(monitorSumFC, shpPath);
 
             newName = shpPath + "\\" + "jctb.shp";
@@ -761,7 +779,7 @@ namespace LandUpdate
         {
             try
             {
-                if (srArrayList.Count >= 0)
+                if (srArrayList.Count > 1)
                 {
                     srEnvelope = Function.getLayersExtent(srArrayList);
 
@@ -769,7 +787,17 @@ namespace LandUpdate
                     //Function.saveFeatureClass(pFeatCls, outputPathName);
                     string path = System.IO.Path.GetDirectoryName(outputPathName);
                     string file = System.IO.Path.GetFileNameWithoutExtension(outputPathName);
-                    Function.MergeLayers(srArrayList, path,file);
+                    IFeatureClass pFeatCls = Function.MergeLayers(srArrayList, path,file);
+                    Function.saveFeatureClass(pFeatCls, path);
+                }
+                else if (srArrayList.Count == 1)
+                {
+                    srEnvelope = Function.getLayersExtent(srArrayList);
+                    ILayer pLyr = srArrayList[0] as ILayer;
+                    IFeatureLayer pFeatLyr = pLyr as IFeatureLayer;
+                    IFeatureClass pFeatCls = pFeatLyr.FeatureClass;
+                    string path = System.IO.Path.GetDirectoryName(outputPathName);
+                    Function.saveFeatureClass(pFeatCls, path);
                 }
                 else
                 {
