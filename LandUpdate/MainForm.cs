@@ -212,8 +212,61 @@ namespace LandUpdate
                             //{
                             //    m_mapControl.Map = mapDoc.get_Map(i);
                             //}
+                            
+
+                            ILayer pLayer = null;
+                            string strLayerName = "";
+                            for (int i = 0; i < m_mapControl.LayerCount ; i++)
+                            {
+                                pLayer = m_mapControl.get_Layer(i);
+                                strLayerName = pLayer.Name.ToString().ToUpper();
+                                if (strLayerName.Contains("JCTB") || strLayerName.Contains("监测图斑"))
+                                {
+                                    pLayer.Name = "监测图斑" + (m_monitorLayers.Count + 1).ToString();
+                                    m_monitorLayers.Add(pLayer);
+                                }
+                                else if (strLayerName.Contains("DLTB") || strLayerName.Contains("地类图斑"))
+                                {
+                                    pLayer.Name = "地类图斑";
+                                    m_dltbLayer = pLayer;
+                                }
+                                else if (strLayerName.Contains("XZDW") || strLayerName.Contains("线状地物"))
+                                {
+                                    pLayer.Name = "线状地物";
+                                    m_xzdwLayer = pLayer;
+                                }
+                                else if (strLayerName.Contains("LXDW") || strLayerName.Contains("零星地物"))
+                                {
+                                    pLayer.Name = "零星地物";
+                                    m_lxdwLayer = pLayer;
+                                }
+                                else if ((strLayerName.Contains("XZQ") && !strLayerName.Contains("XZQJX")) || strLayerName.Contains("行政区"))
+                                {
+                                    pLayer.Name = "行政区";
+                                    m_xzqLayer = pLayer;
+                                }
+                                else if (strLayerName.Contains("JBNT") || strLayerName.Contains("基本农田"))
+                                {
+                                    pLayer.Name = "基本农田" + (m_jbntLayers.Count + 1).ToString();
+                                    m_jbntLayers.Add(pLayer);
+                                }
+                                else if (strLayerName.Contains("REDLINE") || strLayerName.Contains("规划红线"))
+                                {
+                                    pLayer.Name = "规划红线" + (m_redLineLayers.Count + 1).ToString();
+                                    m_redLineLayers.Add(pLayer);
+                                }
+                                else if (strLayerName.Contains("SPSJ") || strLayerName.Contains("用地审批"))
+                                {
+                                    pLayer.Name = "用地审批" + (m_ydspLayers.Count + 1).ToString();
+                                    m_ydspLayers.Add(pLayer);
+                                }
+                            }
+                            pLayer = null;
+                            this.axTOCControl1.Update();
+                            m_currentLayerNum = m_mapControl.LayerCount;
+
                             //刷新地图
-                            m_mapControl.Refresh();
+                            //m_mapControl.Refresh();
                         }
                     }
                     MessageBox.Show("工程打开成功！");
@@ -234,26 +287,34 @@ namespace LandUpdate
                 MessageBox.Show("未打开工程！");
                 return;
             }
-            m_prjMan.WriteProjectFile();
-            string mxdFileName = m_prjMan.m_projectPath + "\\" + m_prjMan.m_projectName + "\\" + m_prjMan.m_projectName + ".mxd";
+            try
+            {
+                m_prjMan.WriteProjectFile();
+                string mxdFileName = m_prjMan.m_projectPath + "\\" + m_prjMan.m_projectName + "\\" + m_prjMan.m_projectName + ".mxd";
 
-            IMxdContents pMxdC;
-            pMxdC = m_mapControl.Map as IMxdContents;
-            
-            IMapDocument pMapDocument = new MapDocumentClass();
-            if (!File.Exists(mxdFileName))
-            {
-                pMapDocument.New(mxdFileName);
+                IMxdContents pMxdC;
+                pMxdC = m_mapControl.Map as IMxdContents;
+
+                IMapDocument pMapDocument = new MapDocumentClass();
+                if (!File.Exists(mxdFileName))
+                {
+                    pMapDocument.New(mxdFileName);
+                }
+                else
+                {
+                    pMapDocument.Open(mxdFileName);
+                }
+                //IActiveView pActiveView = m_mapControl.ActiveView;
+                //pMapDocument.SetActiveView(pActiveView);
+                pMapDocument.ReplaceContents(pMxdC);
+                pMapDocument.Save(true, true);
+                pMapDocument.Close();
+                MessageBox.Show("工程保存成功！");
             }
-            else
+            catch
             {
-                pMapDocument.Open(mxdFileName);
+                MessageBox.Show("工程保存失败！");
             }
-            //IActiveView pActiveView = m_mapControl.ActiveView;
-            //pMapDocument.SetActiveView(pActiveView);
-            pMapDocument.ReplaceContents(pMxdC);
-            pMapDocument.Save(true, true);
-            pMapDocument.Close();
         }
 
         //退出
@@ -286,11 +347,15 @@ namespace LandUpdate
             if (newAddedNum >= 1)
             {
                 ILayer pLayer = null;
-                for (int i = 0; i < newAddedNum; i++)
+                for (int i = 0,count = 0; i < m_mapControl.LayerCount && count < newAddedNum; i++)
                 {
                     pLayer = m_mapControl.get_Layer(i);
-                    pLayer.Name = "监测图斑" + (m_monitorLayers.Count+ 1).ToString();
-                    m_monitorLayers.Add(pLayer);
+                    if (pLayer.Name.ToString().ToUpper().Contains("JCTB"))
+                    {
+                        pLayer.Name = "监测图斑" + (m_monitorLayers.Count + 1).ToString();
+                        m_monitorLayers.Add(pLayer);
+                        count++;
+                    }
                 }
                 pLayer = null;
                 this.axTOCControl1.Update();
@@ -310,11 +375,15 @@ namespace LandUpdate
             if (newAddedNum >= 1)
             {
                 ILayer pLayer = null;
-                for (int i = 0; i < newAddedNum; i++)
+                for (int i = 0, count = 0; i < m_mapControl.LayerCount && count < newAddedNum; i++)
                 {
                     pLayer = m_mapControl.get_Layer(i);
-                    pLayer.Name = "基本农田" + (m_jbntLayers.Count + 1).ToString();
-                    m_jbntLayers.Add(pLayer);
+                    if (pLayer.Name.ToString().ToUpper().Contains("JBNT"))
+                    {
+                        pLayer.Name = "基本农田" + (m_jbntLayers.Count + 1).ToString();
+                        m_jbntLayers.Add(pLayer);
+                        count++;
+                    }
                 }
                 pLayer = null;
                 this.axTOCControl1.Update();
@@ -339,6 +408,16 @@ namespace LandUpdate
                     pLayer.Name = "前时相卫片" + (m_preImgLayers.Count + 1).ToString();
                     m_preImgLayers.Add(pLayer);
                 }
+                //for (int i = 0, count = 0; i < m_mapControl.LayerCount && count < newAddedNum; i++)
+                //{
+                //    pLayer = m_mapControl.get_Layer(i);
+                //    if (pLayer.Name.ToString().ToUpper().Contains("JBNT"))
+                //    {
+                //        pLayer.Name = "前时相卫片" + (m_jbntLayers.Count + 1).ToString();
+                //        m_jbntLayers.Add(pLayer);
+                //        count++;
+                //    }
+                //}
                 pLayer = null;
                 this.axTOCControl1.Update();
                 m_currentLayerNum = m_mapControl.LayerCount;
@@ -379,11 +458,21 @@ namespace LandUpdate
             if (newAddedNum >= 1)
             {
                 ILayer pLayer = null;
-                for (int i = 0; i < newAddedNum; i++)
+                //for (int i = 0; i < newAddedNum; i++)
+                //{
+                //    pLayer = m_mapControl.get_Layer(i);
+                //    pLayer.Name = "规划红线" + (m_redLineLayers.Count + 1).ToString();
+                //    m_redLineLayers.Add(pLayer);
+                //}
+                for (int i = 0, count = 0; i < m_mapControl.LayerCount && count < newAddedNum; i++)
                 {
                     pLayer = m_mapControl.get_Layer(i);
-                    pLayer.Name = "规划红线" + (m_redLineLayers.Count + 1).ToString();
-                    m_redLineLayers.Add(pLayer);
+                    if (pLayer.Name.ToString().ToUpper().Contains("REDLINE"))
+                    {
+                        pLayer.Name = "规划红线" + (m_redLineLayers.Count + 1).ToString();
+                        m_redLineLayers.Add(pLayer);
+                        count++;
+                    }
                 }
                 pLayer = null;
                 this.axTOCControl1.Update();
@@ -407,11 +496,21 @@ namespace LandUpdate
             if (newAddedNum >= 1)
             {
                 ILayer pLayer = null;
-                for (int i = 0; i < newAddedNum; i++)
+                //for (int i = 0; i < newAddedNum; i++)
+                //{
+                //    pLayer = m_mapControl.get_Layer(i);
+                //    pLayer.Name = "用地审批" + (m_ydspLayers.Count + 1).ToString();
+                //    m_ydspLayers.Add(m_mapControl.get_Layer(i));
+                //}
+                for (int i = 0, count = 0; i < m_mapControl.LayerCount && count < newAddedNum; i++)
                 {
                     pLayer = m_mapControl.get_Layer(i);
-                    pLayer.Name = "用地审批" + (m_ydspLayers.Count + 1).ToString();
-                    m_ydspLayers.Add(m_mapControl.get_Layer(i));
+                    if (pLayer.Name.ToString().ToUpper().Contains("SPSJ"))
+                    {
+                        pLayer.Name = "用地审批" + (m_ydspLayers.Count + 1).ToString();
+                        m_ydspLayers.Add(pLayer);
+                        count++;
+                    }
                 }
                 pLayer = null;
                 this.axTOCControl1.Update();
@@ -422,7 +521,20 @@ namespace LandUpdate
         //导入地类图斑图层
         private void importDLTB_Click(object sender, EventArgs e)
         {
-
+            if(m_dltbLayer != null)
+            {
+                DialogResult dr = MessageBox.Show("地类图斑图层已加载，是否替换？", "提示", MessageBoxButtons.YesNo);
+                if (dr == System.Windows.Forms.DialogResult.No)
+                {
+                    return;
+                }
+                else
+                {
+                    m_mapControl.Map.DeleteLayer(m_dltbLayer);
+                    m_dltbLayer = null;
+                    m_currentLayerNum = m_mapControl.LayerCount;
+                }
+            }
             ICommand command = new ControlsAddDataCommandClass();
             command.OnCreate(m_mapControl);
             command.OnClick();
@@ -434,23 +546,60 @@ namespace LandUpdate
             }
             else if (newAddedNum == 1)
             {
-                m_dltbLayer = m_mapControl.get_Layer(0);
-                m_dltbLayer.Name = "地类图斑";
+                ILayer pLayer = null;
+                for (int i = 0; i < m_mapControl.LayerCount; i++)
+                {
+                    pLayer = m_mapControl.get_Layer(i);
+                    if (pLayer.Name.ToString().ToUpper().Contains("DLTB"))
+                    {
+                        pLayer.Name = "地类图斑";
+                        m_dltbLayer = pLayer;
+                        break;
+                    }
+                }
+
+                //m_dltbLayer = m_mapControl.get_Layer(0);
+                //m_dltbLayer.Name = "地类图斑";
                 m_currentLayerNum = m_mapControl.LayerCount;
                 this.axTOCControl1.Update();
             }
             else if (newAddedNum > 1)
             {
-                for (int i = 0; i < newAddedNum; i++)
+                //for (int i = 0; i < newAddedNum; i++)
+                //{
+                //    m_mapControl.DeleteLayer(0);
+                //}
+                ILayer pLayer = null;
+                int lyrcount = m_mapControl.LayerCount;
+                for (int i = lyrcount-1; i < 0; i--)
                 {
-                    m_mapControl.DeleteLayer(0);
+                    pLayer = m_mapControl.get_Layer(i);
+                    if (pLayer.Name.ToString().ToUpper().Contains("DLTB"))
+                    {
+                        m_mapControl.DeleteLayer(i);
+                    }
                 }
+
                 MessageBox.Show("地类图斑只能导入一层！请重新导入！");
             }
         }
         //导入行政区图层
         private void importXZQ_Click(object sender, EventArgs e)
         {
+            if (m_xzqLayer != null)
+            {
+                DialogResult dr = MessageBox.Show("行政区图层已加载，是否替换？", "提示", MessageBoxButtons.YesNo);
+                if (dr == System.Windows.Forms.DialogResult.No)
+                {
+                    return;
+                }
+                else
+                {
+                    m_mapControl.Map.DeleteLayer(m_xzqLayer);
+                    m_xzqLayer = null;
+                    m_currentLayerNum = m_mapControl.LayerCount;
+                }
+            }
             ICommand command = new ControlsAddDataCommandClass();
             command.OnCreate(m_mapControl);
             command.OnClick();
@@ -462,17 +611,38 @@ namespace LandUpdate
             }
             else if (newAddedNum == 1)
             {
-                m_xzqLayer = m_mapControl.get_Layer(0);
-                m_xzqLayer.Name = "行政区";
+                ILayer pLayer = null;
+                for (int i = 0; i < m_mapControl.LayerCount; i++)
+                {
+                    pLayer = m_mapControl.get_Layer(i);
+                    if (pLayer.Name.ToString().ToUpper().Contains("XZQ") && !pLayer.Name.ToString().ToUpper().Contains("XZQJX"))
+                    {
+                        pLayer.Name = "行政区";
+                        m_xzqLayer = pLayer;
+                        break;
+                    }
+                }
+                //m_xzqLayer = m_mapControl.get_Layer(0);
+                //m_xzqLayer.Name = "行政区";
                 m_currentLayerNum = m_mapControl.LayerCount;
                 this.axTOCControl1.Update();
             }
             else if (newAddedNum > 1)
             {
-                for (int i = 0; i < newAddedNum; i++)
+                //for (int i = 0; i < newAddedNum; i++)
+                //{
+                //    //m_mapControl.DeleteLayer(m_mapControl.LayerCount - i - 1);//这种写法明显错误，m_mapControl.LayerCount在DeleteLayer的时候会变化的
+                //    m_mapControl.DeleteLayer(0);//循环删除最上层就好了
+                //}
+                ILayer pLayer = null;
+                int lyrcount = m_mapControl.LayerCount;
+                for (int i = lyrcount - 1; i < 0; i--)
                 {
-                    //m_mapControl.DeleteLayer(m_mapControl.LayerCount - i - 1);//这种写法明显错误，m_mapControl.LayerCount在DeleteLayer的时候会变化的
-                    m_mapControl.DeleteLayer(0);//循环删除最上层就好了
+                    pLayer = m_mapControl.get_Layer(i);
+                    if (pLayer.Name.ToString().ToUpper().Contains("XZQ") && !pLayer.Name.ToString().ToUpper().Contains("XZQJX"))
+                    {
+                        m_mapControl.DeleteLayer(i);
+                    }
                 }
                 MessageBox.Show("行政区只能导入一层！请重新导入！");
             }
@@ -482,6 +652,21 @@ namespace LandUpdate
         //导入零星地物
         private void importLXDW_Click(object sender, EventArgs e)
         {
+            if (m_lxdwLayer != null)
+            {
+                DialogResult dr = MessageBox.Show("零星地物图层已加载，是否替换？", "提示", MessageBoxButtons.YesNo);
+                if (dr == System.Windows.Forms.DialogResult.No)
+                {
+                    return;
+                }
+                else
+                {
+                    m_mapControl.Map.DeleteLayer(m_lxdwLayer);
+                    m_lxdwLayer = null;
+                    m_currentLayerNum = m_mapControl.LayerCount;
+                }
+            }
+
             ICommand command = new ControlsAddDataCommandClass();
             command.OnCreate(m_mapControl);
             command.OnClick();
@@ -493,17 +678,39 @@ namespace LandUpdate
             }
             else if (newAddedNum == 1)
             {
-                m_lxdwLayer = m_mapControl.get_Layer(0);
-                m_lxdwLayer.Name = "零星地物";
+                ILayer pLayer = null;
+                for (int i = 0; i < m_mapControl.LayerCount; i++)
+                {
+                    pLayer = m_mapControl.get_Layer(i);
+                    if (pLayer.Name.ToString().ToUpper().Contains("LXDW"))
+                    {
+                        pLayer.Name = "零星地物";
+                        m_lxdwLayer = pLayer;
+                        break;
+                    }
+                }
+
+                //m_lxdwLayer = m_mapControl.get_Layer(0);
+                //m_lxdwLayer.Name = "零星地物";
                 m_currentLayerNum = m_mapControl.LayerCount;
                 this.axTOCControl1.Update();
             }
             else if (newAddedNum > 1)
             {
-                for (int i = 0; i < newAddedNum; i++)
+                //for (int i = 0; i < newAddedNum; i++)
+                //{
+                //    //m_mapControl.DeleteLayer(m_mapControl.LayerCount - i - 1);
+                //    m_mapControl.DeleteLayer(0);//循环删除最上层就好了
+                //}
+                ILayer pLayer = null;
+                int lyrcount = m_mapControl.LayerCount;
+                for (int i = lyrcount - 1; i < 0; i--)
                 {
-                    //m_mapControl.DeleteLayer(m_mapControl.LayerCount - i - 1);
-                    m_mapControl.DeleteLayer(0);//循环删除最上层就好了
+                    pLayer = m_mapControl.get_Layer(i);
+                    if (pLayer.Name.ToString().ToUpper().Contains("LXDW"))
+                    {
+                        m_mapControl.DeleteLayer(i);
+                    }
                 }
                 MessageBox.Show("零星地物只能导入一层！请重新导入！");
             }
@@ -517,6 +724,21 @@ namespace LandUpdate
         //导入线状地物
         private void importXZDW_Click(object sender, EventArgs e)
         {
+            if (m_xzdwLayer != null)
+            {
+                DialogResult dr = MessageBox.Show("线状地物图层已加载，是否替换？", "提示", MessageBoxButtons.YesNo);
+                if (dr == System.Windows.Forms.DialogResult.No)
+                {
+                    return;
+                }
+                else
+                {
+                    m_mapControl.Map.DeleteLayer(m_xzdwLayer);
+                    m_xzdwLayer = null;
+                    m_currentLayerNum = m_mapControl.LayerCount;
+                }
+            }
+
             ICommand command = new ControlsAddDataCommandClass();
             command.OnCreate(m_mapControl);
             command.OnClick();
@@ -528,17 +750,38 @@ namespace LandUpdate
             }
             else if (newAddedNum == 1)
             {
-                m_xzdwLayer = m_mapControl.get_Layer(0);
-                m_xzdwLayer.Name = "线状地物";
+                ILayer pLayer = null;
+                for (int i = 0; i < m_mapControl.LayerCount; i++)
+                {
+                    pLayer = m_mapControl.get_Layer(i);
+                    if (pLayer.Name.ToString().ToUpper().Contains("XZDW"))
+                    {
+                        pLayer.Name = "线状地物";
+                        m_xzdwLayer = pLayer;
+                        break;
+                    }
+                }
+                //m_xzdwLayer = m_mapControl.get_Layer(0);
+                //m_xzdwLayer.Name = "线状地物";
                 m_currentLayerNum = m_mapControl.LayerCount;
                 this.axTOCControl1.Update();
             }
             else if (newAddedNum > 1)
             {
-                for (int i = 0; i < newAddedNum; i++)
+                //for (int i = 0; i < newAddedNum; i++)
+                //{
+                //    //m_mapControl.DeleteLayer(m_mapControl.LayerCount - i - 1);
+                //    m_mapControl.DeleteLayer(0);//循环删除最上层就好了
+                //}
+                ILayer pLayer = null;
+                int lyrcount = m_mapControl.LayerCount;
+                for (int i = lyrcount - 1; i < 0; i--)
                 {
-                    //m_mapControl.DeleteLayer(m_mapControl.LayerCount - i - 1);
-                    m_mapControl.DeleteLayer(0);//循环删除最上层就好了
+                    pLayer = m_mapControl.get_Layer(i);
+                    if (pLayer.Name.ToString().ToUpper().Contains("XZDW"))
+                    {
+                        m_mapControl.DeleteLayer(i);
+                    }
                 }
                 MessageBox.Show("线状地物只能导入一层！请重新导入！");
             }
