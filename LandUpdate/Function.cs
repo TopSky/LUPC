@@ -960,12 +960,12 @@ namespace LandUpdate
                         int indexWLYDZY = jctbFeat.Fields.FindField(WLYDZY);
                         int indexJSYDZY = jctbFeat.Fields.FindField(JSYDZY);
                         Double.TryParse(jctbFeat.get_Value(jctbFeat.Fields.FindField(JCMJ)).ToString(), out jctbmj);
-                        jctbmj = jctbmj * 10000 / 15;//亩换算为平方米
-                        gdmjbl = sumzygdmj / jctbmj;
-                        jctbFeat.set_Value(indexGDZY, sumzygdmj);
-                        jctbFeat.set_Value(indexGDMJBL, gdmjbl);
-                        jctbFeat.set_Value(indexWLYDZY, sumzyjsydmj);
-                        jctbFeat.set_Value(indexJSYDZY, sumzywlydmj);
+                        //jctbmj = jctbmj * 10000 / 15;//亩换算为平方米
+                        gdmjbl = Math.Round(sumzygdmj *15/10000,1) / jctbmj;
+                        jctbFeat.set_Value(indexGDZY, Math.Round(sumzygdmj *15/10000,1));
+                        jctbFeat.set_Value(indexGDMJBL, Math.Round(gdmjbl,2));
+                        jctbFeat.set_Value(indexJSYDZY, Math.Round(sumzyjsydmj*15/10000,1));
+                        jctbFeat.set_Value(indexWLYDZY, Math.Round(sumzywlydmj*15/10000,1));
                         jctbFeat.Store();
                         jctbFeat = pJCTBCursor.NextFeature();
 
@@ -1095,7 +1095,7 @@ namespace LandUpdate
                                 jbntzyArea += pArea.Area;
                                 pJBNTfeat = pJBNTCursor.NextFeature();
                             }
-                            jctbFeat.set_Value(indexJBNTZY, jbntzyArea);
+                            jctbFeat.set_Value(indexJBNTZY, Math.Round(jbntzyArea*15/10000,1));
                         }
 
                         jctbFeat.Store();
@@ -1199,7 +1199,7 @@ namespace LandUpdate
                                 ydspchArea += pArea.Area;
                                 pYDSPfeat = pYDSPCursor.NextFeature();
                             }
-                            jctbFeat.set_Value(indexYDSPCH, ydspchArea);
+                            jctbFeat.set_Value(indexYDSPCH, Math.Round(ydspchArea*15/10000,1));
                         }
 
                         jctbFeat.Store();
