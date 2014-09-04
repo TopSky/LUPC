@@ -1259,5 +1259,87 @@ namespace LandUpdate
         }
         #endregion
 
+        /// <summary>
+        /// 按XZQDM分割监测图斑
+        /// </summary>
+        /// <param name="pFeatureCls1">监测图斑图层</param>
+        /// <param name="pFeatureCls2">行政区图层</param>
+        /// <param name="strXZQDM">行政区代码（镇或村）</param>
+        /// <param name="strOutputName">输出文件名称</param>
+        /// <param name="strOutputPath">输出文件路径</param>
+        /// <returns></returns>
+        public static void ClipJCTBByXZQ(IFeatureClass pFeatureCls1,IFeatureClass pFeatureCls2, string strXZQDM, string strOutputName, string strOutputPath)
+        {
+            IDataset pInDataSet, pOutDataSet;
+            IWorkspace pInWorkSpace;
+            IFeatureClassName pInFeatureClassName, pOutFeatureClassName;
+            IWorkspaceFactory pOutWorkspaceFactory;
+            IFeatureWorkspace pOutWorkerspace;
+            IWorkspaceName pOutWorkspaceName;
+            IDatasetName pOutDataSetName;
+            IFieldChecker pFieldChecker;
+            IEnumFieldError pEnumFieldError;
+            IFields pOutFields;
+            IFeatureDataConverter pFeatureDataConvert;
+            
+
+            if(pFeatureCls1 == null)
+            {
+                return;
+            }
+
+
+            //得到输入
+            pInDataSet = pFeatureCls1 as IDataset;  
+            pInWorkSpace = pInDataSet.Workspace;
+            pInFeatureClassName = pInDataSet.FullName as IFeatureClassName;
+
+            //定义输出
+            pOutWorkspaceFactory = new ShapefileWorkspaceFactoryClass();
+            pOutWorkerspace = pOutWorkspaceFactory.OpenFromFile(strOutputPath, 0) as IFeatureWorkspace;
+            pOutDataSet = pOutWorkerspace as IDataset;
+            pOutWorkspaceName = pOutDataSet.FullName as IWorkspaceName;
+            pOutFeatureClassName = new FeatureClassNameClass();
+            pOutDataSetName = pOutFeatureClassName as IDatasetName;
+            pOutDataSetName.Name = strOutputName;
+            pOutDataSetName.WorkspaceName = pOutWorkspaceName;
+
+            //检查字段
+            pFieldChecker = new FieldCheckerClass();
+            pFieldChecker.InputWorkspace = pInWorkSpace;
+            pFieldChecker.ValidateWorkspace = pOutWorkerspace as IWorkspace;
+            pFieldChecker.Validate(pFeatureCls1.Fields, out pEnumFieldError, out pOutFields);
+                
+            //要素筛选
+            IQueryFilter pQueryFilter = new QueryFilterClass();
+            pQueryFilter.WhereClause = "XZQDM LIKE '" + strXZQDM + "%'";
+            IFeatureCursor pFeatureCursor = pFeatureCls2.Search(pQueryFilter, false);
+            if (pFeatureCursor == null)
+            {
+                return;
+            }
+
+            IFeature pFeature = pFeatureCursor.NextFeature();
+            IGeometry pGeometry = pFeature.ShapeCopy;
+            ITopologicalOperator pTopo = pGeometry as ITopologicalOperator;
+            IFeature pFeature1 = pFeatureCursor.NextFeature();
+            while (pFeature1 != null)
+            {
+                IGeometry pGeometry1 = pFeature1.ShapeCopy;
+                pTopo.Union(pGeometry1);
+                pFeature1 = pFeatureCursor.NextFeature();
+            }
+            pTopo.Simplify();
+            ISpatialFilter pSpatialFilter = new SpatialFilterClass();
+            pSpatialFilter.Geometry = pGeometry;
+            pSpatialFilter.SpatialRel = esriSpatialRelEnum.esriSpatialRelContains;
+
+            //转换输出
+            pFeatureDataConvert = new FeatureDataConverterClass();
+            pFeatureDataConvert.ConvertFeatureClass(pInFeatureClassName, pSpatialFilter, pOutDataSetName as IFeatureDatasetName, pOutFeatureClassName, null, pOutFields, "", 100, 0);
+
+            return;
+        }
+
     }
 }
