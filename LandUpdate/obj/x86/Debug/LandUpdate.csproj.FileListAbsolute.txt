@@ -28,3 +28,9 @@ F:\TopSky\LUPC\LandUpdate\obj\x86\Debug\LandUpdate.mainForm.resources
 F:\TopSky\LUPC\LandUpdate\obj\x86\Debug\LandUpdate.FormNewPrj.resources
 F:\TopSky\LUPC\LandUpdate\obj\x86\Debug\LandUpdate.Properties.Resources.resources
 F:\TopSky\LUPC\LandUpdate\obj\x86\Debug\LandUpdate.csproj.GenerateResource.Cache
+F:\TopSky\LUPC\LandUpdate\bin\Debug\ESRI.ArcGIS.DataSourcesRaster.dll
+F:\TopSky\LUPC\LandUpdate\bin\Debug\ESRI.ArcGIS.GeoAnalyst.dll
+F:\TopSky\LUPC\LandUpdate\bin\Debug\ESRI.ArcGIS.SpatialAnalyst.dll
+F:\TopSky\LUPC\LandUpdate\bin\Debug\ESRI.ArcGIS.DataSourcesRaster.xml
+F:\TopSky\LUPC\LandUpdate\bin\Debug\ESRI.ArcGIS.GeoAnalyst.xml
+F:\TopSky\LUPC\LandUpdate\bin\Debug\ESRI.ArcGIS.SpatialAnalyst.xml

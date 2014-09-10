@@ -25,6 +25,9 @@ using ESRI.ArcGIS.Geoprocessing;
 using ESRI.ArcGIS.Geoprocessor;
 using ESRI.ArcGIS.AnalysisTools;
 using ESRI.ArcGIS.DataManagementTools;
+using ESRI.ArcGIS.SpatialAnalyst;
+using ESRI.ArcGIS.DataSourcesRaster;
+using ESRI.ArcGIS.GeoAnalyst;
 
 
   
@@ -1341,5 +1344,104 @@ namespace LandUpdate
             return;
         }
 
+
+        //ArcGIS影像操作
+        /// <summary>
+        /// 影像切割by yl 2008.06.16 landgis@126.com,参考http://bbs.esrichina-bj.cn/ESRI/viewthread.php?tid=28659&extra=&page=1修改
+        /// </summary>
+        /// <param name="pRasterLayer">要裁切的影像图层</param>
+        /// <param name="FileName">绝对路径+后缀img</param>
+        public static void RasterClip(IRasterLayer pRasterLayer, IPolygon clipGeo, string FileName)
+        {
+            IRaster pRaster = pRasterLayer.Raster;
+            IRasterProps pProps = pRaster as IRasterProps;
+            object cellSizeProvider = pProps.MeanCellSize().X;
+            IGeoDataset pInputDataset = pRaster as IGeoDataset;
+            IExtractionOp pExtractionOp = new RasterExtractionOpClass();
+            IRasterAnalysisEnvironment pRasterAnaEnvir = pExtractionOp as IRasterAnalysisEnvironment;
+            pRasterAnaEnvir.SetCellSize(esriRasterEnvSettingEnum.esriRasterEnvValue, ref cellSizeProvider);
+            object extentProvider = clipGeo.Envelope;
+            object snapRasterData = Type.Missing;
+            pRasterAnaEnvir.SetExtent(esriRasterEnvSettingEnum.esriRasterEnvValue, ref extentProvider, ref snapRasterData);
+            IGeoDataset pOutputDataset = pExtractionOp.Polygon(pInputDataset, clipGeo as IPolygon, true);
+            IRaster clipRaster;  //裁切后得到的IRaster
+            if (pOutputDataset is IRasterLayer)
+            {
+                IRasterLayer rasterLayer = pOutputDataset as IRasterLayer;
+                clipRaster = rasterLayer.Raster;
+            }
+            else if (pOutputDataset is IRasterDataset)
+            {
+                IRasterDataset rasterDataset = pOutputDataset as IRasterDataset;
+                clipRaster = rasterDataset.CreateDefaultRaster();
+            }
+            else if (pOutputDataset is IRaster)
+            {
+                clipRaster = pOutputDataset as IRaster;
+            }
+            else
+            {
+                return;
+            }
+ 
+            //保存裁切后得到的clipRaster
+ 
+            //如果直接保存为img影像文件
+            IWorkspaceFactory pWKSF = new RasterWorkspaceFactoryClass();
+            IWorkspace pWorkspace = pWKSF.OpenFromFile(System.IO.Path.GetDirectoryName(FileName), 0);
+            ISaveAs pSaveAs = clipRaster as ISaveAs;
+            pSaveAs.SaveAs(System.IO.Path.GetFileName(FileName), pWorkspace, "IMAGINE Image");
+        }
+
+        /// <summary>
+        /// 根据行政区代码获取行政区图形 过滤条件："XZQDM LIKE '" strXZQDM  "%'";
+        /// </summary>
+        /// <param name="strXZQDM">行政区代码</param>
+        /// <param name="pFeatureCls">行政区图层</param>
+        /// <returns>IGeometry</returns>
+        public static IGeometry GetXZQGeometry(string strXZQDM,IFeatureClass pFeatureCls)
+        {
+            //要素筛选
+            IQueryFilter pQueryFilter = new QueryFilterClass();
+            pQueryFilter.WhereClause = "XZQDM LIKE '" + strXZQDM + "%'";
+            IFeatureCursor pFeatureCursor = pFeatureCls.Search(pQueryFilter, false);
+            if (pFeatureCursor == null)
+            {
+                return null;
+            }
+
+            IFeature pFeature = pFeatureCursor.NextFeature();
+            IGeometry pGeometry = pFeature.ShapeCopy;
+            ITopologicalOperator pTopo = pGeometry as ITopologicalOperator;
+            IFeature pFeature1 = pFeatureCursor.NextFeature();
+            while (pFeature1 != null)
+            {
+                IGeometry pGeometry1 = pFeature1.ShapeCopy;
+                pTopo.Union(pGeometry1);
+                pFeature1 = pFeatureCursor.NextFeature();
+            }
+            pTopo.Simplify();
+
+            return pGeometry;
+ 
+        }
+        /// <summary>
+        /// 获取IRasterLayer
+        /// </summary>
+        /// <param name="strRasterfilePath">本地影像路径</param>
+        /// <returns></returns>
+        public static IRasterLayer GetRasterLayer(string strRasterfilePath)
+        {
+            try
+            {
+                IRasterLayer pRasterlayer = new RasterLayerClass();
+                pRasterlayer.CreateFromFilePath(strRasterfilePath);
+                return pRasterlayer;
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }
